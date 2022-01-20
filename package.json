@@ -1,0 +1,15 @@
+{
+  "name": "rkclient",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "repository": "https://github.com/remote-kakao/RKClient.git",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "author": "thoratica <me@tica.fun>",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^4.5.4"
+  }
+}
