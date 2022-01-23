@@ -1,6 +1,6 @@
 {
   "name": "core-client",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.0",
   "main": "dist/index.js",
   "repository": "https://github.com/remote-kakao/core-client.git",
   "scripts": {
