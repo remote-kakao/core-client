@@ -1,6 +1,19 @@
-const config = {
+Device.acquireWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, '');
+
+interface Plugin {
+  onMessage?(
+    event: string,
+    data: Record<string, any>,
+    session: string,
+    sendReply: (session: string, success: boolean, data: Record<string, any> | undefined) => void,
+    _eval: (x: string) => string
+  ): void;
+}
+
+const config: { address: string; port: number; plugins: Plugin[] } = {
   address: '172.30.1.1',
   port: 3000,
+  plugins: [],
 };
 
 const socket = new java.net.DatagramSocket();
@@ -41,6 +54,10 @@ const handleMessage = (msg: string) => {
       sendReply(session, res);
       break;
   }
+
+  config.plugins.forEach((plugin) => {
+    if (plugin.onMessage) plugin.onMessage(event, data, session, sendReply, (x) => eval(x));
+  });
 };
 
 const send = (msg: Message) => {

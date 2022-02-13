@@ -49,3 +49,9 @@ declare namespace Api {
   export function isTerminated(scriptName: string): boolean;
   export function markAsRead(room?: string, packageName?: string): boolean;
 }
+
+declare namespace Device {
+  export function acquireWakeLock(param1: number, param2: string);
+}
+
+declare const require = (module: string) => any;
