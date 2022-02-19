@@ -40,7 +40,7 @@ const sendMessage = (event: string, data: Record<string, any>) => {
 };
 
 const sendReply = (session: string, success: boolean, data?: Record<string, any>) => {
-  const bytes = getBytes(JSON.stringify({ session, success, data }));
+  const bytes = getBytes(JSON.stringify({ event: "reply", session, success, data }));
   const outPacket = new java.net.DatagramPacket(bytes, bytes.length, address, config.port);
   socket.send(outPacket);
 };
