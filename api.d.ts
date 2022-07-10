@@ -1,5 +1,9 @@
-declare const importPackage: (...pkgs: (android | androidx | java | javax)[]) => any;
-declare const importClass: (...pkgs: (android | androidx | java | javax)[]) => any;
+declare const importPackage: (
+  ...pkgs: (android | androidx | java | javax)[]
+) => any;
+declare const importClass: (
+  ...pkgs: (android | androidx | java | javax)[]
+) => any;
 
 declare interface Message {
   room: string;
@@ -10,6 +14,7 @@ declare interface Message {
     getProfileBase64(): string;
   };
   packageName: string;
+  userId: number;
 }
 
 declare namespace Log {
@@ -24,9 +29,15 @@ declare namespace Log {
 
 declare namespace Api {
   export function reload(): boolean;
-  export function reload(scriptName: string, throwOnError: boolean = false): boolean;
+  export function reload(
+    scriptName: string,
+    throwOnError: boolean = false
+  ): boolean;
   export function compile(): boolean;
-  export function compile(scriptName: string, throwOnError: boolean = false): boolean;
+  export function compile(
+    scriptName: string,
+    throwOnError: boolean = false
+  ): boolean;
   export function prepare(scriptName: string): number;
   export function unload(scriptName: string): boolean;
   export function off(): boolean;
@@ -37,11 +48,24 @@ declare namespace Api {
   export function isCompiled(scriptName: string): boolean;
   export function isCompiling(scriptName: string): boolean;
   export function getScriptNames(): string[];
-  export function replyRoom(room: string, message: string, hideToast: boolean = false): boolean;
+  export function replyRoom(
+    room: string,
+    message: string,
+    hideToast: boolean = false
+  ): boolean;
   export function canReply(room: string): boolean;
   export function showToast(content: string, length: number): void;
-  export function makeNoti(title: string, content: string, id: number): string[];
-  export function papagoTranslate(sourceLanguage: string, targetLanguage: string, content: string, errorToString: boolean = false): string;
+  export function makeNoti(
+    title: string,
+    content: string,
+    id: number
+  ): string[];
+  export function papagoTranslate(
+    sourceLanguage: string,
+    targetLanguage: string,
+    content: string,
+    errorToString: boolean = false
+  ): string;
   export function gc(): void;
   export function UIThread(func: Function, onComplete: Function): void;
   export function getActiveThreadsCount(scriptName: string): number;

@@ -2,6 +2,9 @@
   "compilerOptions": {
     "target": "ES5",
     "module": "CommonJS",
+    "lib": [
+      "ES2015"
+    ],
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
