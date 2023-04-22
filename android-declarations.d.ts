@@ -8,3 +8,6 @@ declare module androidNative {
 }
 
 import globalAndroid = android;
+
+// rome-ignore lint/suspicious/noExplicitAny: <explanation>
+type Any = any;

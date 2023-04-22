@@ -1,9 +1,7 @@
-declare const importPackage: <T>(
-	...pkgs: (android | androidx | java | javax)[]
-) => T;
-declare const importClass: <T>(
-	...pkgs: (android | androidx | java | javax)[]
-) => T;
+/// <reference path="android-declarations.d.ts"/>
+
+declare const importPackage: (...pkgs: Any[]) => void;
+declare const importClass: (...pkgs: Any[]) => void;
 
 declare interface Message {
 	room: string;
@@ -18,26 +16,20 @@ declare interface Message {
 }
 
 declare namespace Log {
-	export function d(data: string, showToast: boolean = false): void;
-	export function debug(data: string, showToast: boolean = false): void;
-	export function e(data: string, showToast: boolean = false): void;
-	export function error(data: string, showToast: boolean = false): void;
-	export function i(data: string, showToast: boolean = false): void;
-	export function info(data: string, showToast: boolean = false): void;
+	export function d(data: string, showToast?: boolean): void;
+	export function debug(data: string, showToast?: boolean): void;
+	export function e(data: string, showToast?: boolean): void;
+	export function error(data: string, showToast?: boolean): void;
+	export function i(data: string, showToast?: boolean): void;
+	export function info(data: string, showToast?: boolean): void;
 	export function clear(): void;
 }
 
 declare namespace Api {
 	export function reload(): boolean;
-	export function reload(
-		scriptName: string,
-		throwOnError: boolean = false,
-	): boolean;
+	export function reload(scriptName: string, throwOnError: boolean): boolean;
 	export function compile(): boolean;
-	export function compile(
-		scriptName: string,
-		throwOnError: boolean = false,
-	): boolean;
+	export function compile(scriptName: string, throwOnError: boolean): boolean;
 	export function prepare(scriptName: string): number;
 	export function unload(scriptName: string): boolean;
 	export function off(): boolean;
@@ -51,7 +43,7 @@ declare namespace Api {
 	export function replyRoom(
 		room: string,
 		message: string,
-		hideToast: boolean = false,
+		hideToast?: boolean,
 	): boolean;
 	export function canReply(room: string): boolean;
 	export function showToast(content: string, length: number): void;
@@ -64,7 +56,7 @@ declare namespace Api {
 		sourceLanguage: string,
 		targetLanguage: string,
 		content: string,
-		errorToString: boolean = false,
+		errorToString?: boolean,
 	): string;
 	export function gc(): void;
 	export function UIThread(func: Function, onComplete: Function): void;
@@ -75,7 +67,7 @@ declare namespace Api {
 }
 
 declare namespace Device {
-	export function acquireWakeLock(param1: number, param2: string);
+	export function acquireWakeLock(param1: number, param2: string): void;
 }
 
-declare const require = (module: string) => any;
+declare const require: (module: string) => Any;
