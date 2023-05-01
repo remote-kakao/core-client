@@ -7,13 +7,11 @@ const config: {
   port: number;
   packageNames: string[];
   userIds: number[];
-  maxDatagramSize: number;
 } = {
   address: '172.30.1.41',
   port: 3000,
   packageNames: ['com.kakao.talk'],
   userIds: [95],
-  maxDatagramSize: 512,
 };
 
 const pluginDir = new java.io.File(
