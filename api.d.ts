@@ -26,6 +26,7 @@ declare namespace Log {
 }
 
 declare namespace Api {
+	export function getContext(): android.content.Context;
 	export function reload(): boolean;
 	export function reload(scriptName: string, throwOnError: boolean): boolean;
 	export function compile(): boolean;
@@ -64,6 +65,13 @@ declare namespace Api {
 	export function interruptThreads(scriptName: string): void;
 	export function isTerminated(scriptName: string): boolean;
 	export function markAsRead(room?: string, packageName?: string): boolean;
+}
+
+declare namespace FileStream {
+	export function read(path: string): string;
+	export function write(path: string, data: string): string;
+	export function append(path: string, data: string): string;
+	export function remove(path: string): boolean;
 }
 
 declare namespace Device {

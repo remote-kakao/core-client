@@ -1,194 +1,314 @@
-Device.acquireWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "");
+Device.acquireWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, '');
 
-const scriptName = "remote-kakao";
+const scriptName = 'remote-kakao';
 
 const config: {
-	address: string;
-	port: number;
-	plugins: any[];
-	packageNames: string[];
-	userIds: number[];
+  address: string;
+  port: number;
+  packageNames: string[];
+  userIds: number[];
+  maxDatagramSize: number;
 } = {
-	address: "",
-	port: 3000,
-	plugins: [],
-	packageNames: ["com.kakao.talk"],
-	userIds: [0, 95],
+  address: '172.30.1.41',
+  port: 3000,
+  packageNames: ['com.kakao.talk'],
+  userIds: [95],
+  maxDatagramSize: 512,
 };
+
+const pluginDir = new java.io.File(
+  com.xfl.msgbot.utils.SharedVar.Companion.getBotsPath(),
+  `${scriptName}/plugins`,
+);
+if (!pluginDir.exists())
+  new java.io.File(
+    com.xfl.msgbot.utils.SharedVar.Companion.getBotsPath(),
+    `${scriptName}/plugins`,
+  ).mkdir();
+
+Array.from(pluginDir.listFiles()).forEach((file) =>
+  Log.d(FileStream.read(file.getAbsolutePath())),
+);
 
 const socket = new java.net.DatagramSocket();
 const address = java.net.InetAddress.getByName(config.address);
 const buffer = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, 65535);
 const inPacket = new java.net.DatagramPacket(buffer, buffer.length);
-const repliers = new Map();
+const replyActions = new Map<
+  number,
+  Map<
+    string,
+    Map<
+      string,
+      [android.app.Notification.Action, android.app.Notification.Action]
+    >
+  >
+>();
+const profileImages = new Map<number, Map<string, Map<string, string>>>();
+const roomIcons = new Map<number, Map<string, Map<string, string>>>();
 
 function getBytes(str: string) {
-	return new java.lang.String(str).getBytes();
+  return new java.lang.String(str).getBytes();
 }
 
 function sendEvent<T>(event: string, data: T) {
-	const bytes = getBytes(JSON.stringify({ event, data }));
-	const outPacket = new java.net.DatagramPacket(
-		bytes,
-		bytes.length,
-		address,
-		config.port,
-	);
-	socket.send(outPacket);
+  const bytes = getBytes(JSON.stringify({ event, data }));
+  const outPacket = new java.net.DatagramPacket(
+    bytes,
+    bytes.length,
+    address,
+    config.port,
+  );
+  socket.send(outPacket);
 }
 
-function onMessage(
-	room: string,
-	content: string,
-	sender: string,
-	isGroupChat: boolean,
-	profileImage: string,
-	packageName: string,
-	userId: number,
-	chatId: string,
-	logId: string,
-) {
-	sendEvent("chat", {
-		room,
-		content,
-		sender,
-		isGroupChat,
-		profileImage,
-		packageName,
-		userId,
-		chatId,
-		logId,
-	});
+function bitmapToBase64(icon: android.graphics.Bitmap) {
+  const outStream = new java.io.ByteArrayOutputStream();
+  icon.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outStream);
+  const byteArray = outStream.toByteArray();
+
+  try {
+    outStream.close();
+  } catch (_) {}
+
+  return android.util.Base64.encodeToString(byteArray, 0);
+}
+
+interface Data {
+  [key: string]: string | number | boolean | undefined | Data;
+}
+
+const receiveMessage = (msg: string) => {
+  const {
+    event,
+    data,
+    session,
+  }: { event: string; data: Data; session: string } = JSON.parse(msg);
+
+  switch (event) {
+    case 'send_text':
+      if (
+        data.userId?.toString() &&
+        data.packageName &&
+        data.roomId &&
+        data.text
+      ) {
+        const action = replyActions
+          .get(Number(data.userId))
+          ?.get(data.packageName.toString())
+          ?.get(data.roomId.toString())?.[1];
+        if (action) {
+          const intent = new android.content.Intent();
+          const bundle = new android.os.Bundle();
+          const remoteInputs = action.getRemoteInputs();
+
+          for (const input of Array.from(remoteInputs))
+            bundle.putCharSequence(input.getResultKey(), data.text.toString());
+
+          android.app.RemoteInput.addResultsToIntent(
+            action.getRemoteInputs(),
+            intent,
+            bundle,
+          );
+
+          try {
+            action.actionIntent.send(Api.getContext(), 0, intent);
+            sendEvent(`reply:${session}`, true);
+          } catch (_) {
+            sendEvent(`reply:${session}`, false);
+          }
+        }
+      }
+      sendEvent(`reply:${session}`, false);
+      break;
+    case 'read':
+      if (data.userId?.toString() && data.packageName && data.roomId) {
+        const action = replyActions
+          .get(Number(data.userId))
+          ?.get(data.packageName.toString())
+          ?.get(data.roomId.toString())?.[0];
+        if (action) {
+          try {
+            action.actionIntent.send(
+              Api.getContext(),
+              1,
+              new android.content.Intent(),
+            );
+            sendEvent(`reply:${session}`, true);
+          } catch (_) {
+            sendEvent(`reply:${session}`, false);
+          }
+        }
+      }
+      sendEvent(`reply:${session}`, false);
+      break;
+    case 'get_profile_image':
+      if (data.userId?.toString() && data.packageName && data.userHash) {
+        const profileImage = profileImages
+          .get(Number(data.userId))
+          ?.get(data.packageName.toString())
+          ?.get(data.userHash.toString());
+        if (profileImage) return sendEvent(`reply:${session}`, profileImage);
+      }
+      sendEvent(`reply:${session}`, undefined);
+      break;
+    case 'get_room_icon':
+      if (data.userId?.toString() && data.packageName && data.roomId) {
+        const icon = roomIcons
+          .get(Number(data.userId))
+          ?.get(data.packageName.toString())
+          ?.get(data.roomId.toString());
+        if (icon) return sendEvent(`reply:${session}`, icon);
+      }
+      sendEvent(`reply:${session}`, undefined);
+      break;
+  }
+
+  // config.plugins.forEach((plugin) => {
+  // 	if (plugin.onMessage)
+  // 		plugin.onMessage(event, data, session, sendReply, (x) => eval(x));
+  // });
+};
+
+function onMessage(data: {
+  room: { name: string; id: string; isGroupChat: boolean };
+  id: string;
+  sender: { name: string; hash: string };
+  content: string;
+  containsMention: boolean;
+  time: number;
+  app: { packageName: string; userId: number };
+}) {
+  sendEvent('message', data);
 }
 
 // @ts-ignore
 const thread = new java.lang.Thread({
-	run() {
-		while (true) {
-			socket.receive(inPacket);
-			Log.d("wa");
-			const message = String(
-				new java.lang.String(
-					inPacket.getData(),
-					inPacket.getOffset(),
-					inPacket.getLength(),
-				),
-			);
+  run() {
+    while (true) {
+      socket.receive(inPacket);
+      const message = decodeURIComponent(
+        String(
+          new java.lang.String(
+            inPacket.getData(),
+            inPacket.getOffset(),
+            inPacket.getLength(),
+          ),
+        ),
+      );
 
-			Log.d(message);
-		}
-	},
+      receiveMessage(message);
+    }
+  },
 });
 
 function onStartCompile() {
-	return thread.interrupt();
+  replyActions.clear();
+  return thread.interrupt();
 }
 thread.start();
 
 function onNotificationPosted(
-	sbn: android.service.notification.StatusBarNotification,
+  sbn: android.service.notification.StatusBarNotification,
 ): void {
-	Api.makeNoti(
-		sbn.getNotification().extras.getString("android.text"),
-		sbn.getNotification().extras.getString("android.subText"),
-		0,
-	);
-	const packageName = sbn.getPackageName();
-	const userId = sbn.getUser().hashCode();
-	if (
-		!config.packageNames.includes(packageName) ||
-		!config.userIds.includes(userId)
-	)
-		return;
+  const packageName = sbn.getPackageName();
+  const userId = sbn.getUser().hashCode();
+  if (
+    !config.packageNames.includes(packageName) ||
+    !config.userIds.includes(userId)
+  )
+    return;
 
-	const noti = sbn.getNotification();
-	const actions = noti.actions;
-	const bundle = noti.extras;
-	if (
-		!actions ||
-		!bundle ||
-		bundle.getString("android.template") !==
-			"android.app.Notification$MessagingStyle"
-	)
-		return;
+  const noti = sbn.getNotification();
+  const actions = noti.actions;
+  const bundle = noti.extras;
+  if (
+    !actions ||
+    !bundle ||
+    bundle.getString('android.template') !==
+      'android.app.Notification$MessagingStyle'
+  )
+    return;
 
-	const sender = bundle.getString("android.title");
-	const room =
-		bundle.getString("android.subText") ??
-		bundle.getString("android.summaryText") ??
-		sender;
+  const senderName = bundle.getString('android.title');
+  const roomName =
+    bundle.getString('android.subText') ??
+    bundle.getString('android.summaryText') ??
+    senderName;
 
-	for (const action of Array.from(actions)) {
-		if (
-			action.getRemoteInputs() &&
-			["reply", "답장"].includes(action.title.toLowerCase())
-		) {
-			const content = bundle.getString("android.text");
-			const isGroupChat = bundle.getBoolean("android.isGroupConversation");
+  const androidText = bundle.get('android.text');
+  const content = androidText.toString();
+  const containsMention = androidText instanceof android.text.SpannableString;
+  const isGroupChat = bundle.getBoolean('android.isGroupConversation');
 
-			const icon = (
-				(
-					(
-						bundle.getParcelableArray(
-							"android.messages",
-						)[0] as android.os.Bundle
-					).getParcelable("sender_person") as android.app.Person
-				).getIcon() as android.graphics.drawable.BitmapDrawable
-			).getBitmap();
+  const messageBundle = bundle.getParcelableArray(
+    'android.messages',
+  )[0] as android.os.Bundle;
+  const senderPerson = messageBundle.get('sender_person') as android.app.Person;
+  const senderHash = senderPerson.getKey();
+  const time = messageBundle.getLong('time');
 
-			const outStream = new java.io.ByteArrayOutputStream();
-			icon.compress(
-				android.graphics.Bitmap.CompressFormat.JPEG,
-				100,
-				outStream,
-			);
-			const byteArray = outStream.toByteArray();
+  const roomId = sbn.getTag();
+  const logId = java.lang.Long.toString(bundle.getLong('chatLogId'));
 
-			try {
-				outStream.close();
-			} catch (_) {}
+  const profileImage = bitmapToBase64(
+    (
+      senderPerson.getIcon() as android.graphics.drawable.BitmapDrawable
+    ).getBitmap(),
+  );
 
-			const profileImage = android.util.Base64.encodeToString(byteArray, 0);
+  if (!profileImages.has(userId)) profileImages.set(userId, new Map());
+  if (!profileImages.get(userId)?.has(packageName))
+    profileImages.get(userId)?.set(packageName, new Map());
+  if (!profileImages.get(userId)?.get(packageName)?.has(senderHash))
+    profileImages.get(userId)?.get(packageName)?.set(roomId, profileImage);
 
-			const chatId = sbn.getTag();
-			const logId = java.lang.Long.toString(bundle.getLong("chatLogId"));
+  const roomIcon = bitmapToBase64(
+    (
+      bundle.get(
+        'android.largeIcon',
+      ) as android.graphics.drawable.BitmapDrawable
+    ).getBitmap(),
+  );
 
-			if (!repliers.has(logId))
-				repliers.set(
-					logId,
-					new com.xfl.msgbot.script.api.legacy.SessionCacheReplier(
-						packageName,
-						action,
-						room,
-						false,
-						scriptName,
-					),
-				);
+  if (!roomIcons.has(userId)) roomIcons.set(userId, new Map());
+  if (!roomIcons.get(userId)?.has(packageName))
+    roomIcons.get(userId)?.set(packageName, new Map());
+  if (!roomIcons.get(userId)?.get(packageName)?.has(roomId))
+    roomIcons.get(userId)?.get(packageName)?.set(roomId, roomIcon);
 
-			com.xfl.msgbot.application.service.NotificationListener.Companion.setSession(
-				packageName,
-				room,
-				action,
-			);
+  let readAction: android.app.Notification.Action | undefined = undefined;
 
-			onMessage.call(
-				null,
-				room,
-				content,
-				sender,
-				isGroupChat,
-				profileImage,
-				packageName,
-				userId,
-				chatId,
-				logId,
-			);
-		} else if (["read", "읽음"].includes(action.title.toLowerCase())) {
-			com.xfl.msgbot.application.service.NotificationListener.Companion.setMarkAsRead(
-				packageName,
-				room,
-				action,
-			);
-		}
-	}
+  for (const action of Array.from(actions)) {
+    if (
+      action.getRemoteInputs() &&
+      ['reply', '답장'].includes(action.title.toLowerCase())
+    ) {
+      if (!replyActions.has(userId)) replyActions.set(userId, new Map());
+      if (!replyActions.get(userId)?.has(packageName))
+        replyActions.get(userId)?.set(packageName, new Map());
+      if (!replyActions.get(userId)?.get(packageName)?.has(roomId))
+        replyActions
+          .get(userId)
+          ?.get(packageName)
+          ?.set(roomId, [readAction ?? actions[1], action]);
+
+      onMessage.call(null, {
+        room: { name: roomName, id: roomId, isGroupChat },
+        id: logId,
+        sender: { name: senderName, hash: senderHash },
+        content,
+        containsMention,
+        time,
+        app: { packageName, userId },
+      });
+    } else if (['read', '읽음'].includes(action.title.toLowerCase())) {
+      readAction = action;
+      com.xfl.msgbot.application.service.NotificationListener.Companion.setMarkAsRead(
+        packageName,
+        roomName,
+        action,
+      );
+    }
+  }
 }
