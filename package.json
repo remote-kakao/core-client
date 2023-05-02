@@ -1,7 +1,6 @@
 {
   "name": "core-client",
   "version": "2.0.0",
-  "main": "index.js",
   "license": "MIT",
   "author": "thoratica <me@tica.fun>",
   "scripts": {
