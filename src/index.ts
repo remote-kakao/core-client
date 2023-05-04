@@ -11,7 +11,7 @@ const config: {
   address: '172.30.1.41',
   port: 3000,
   packageNames: ['com.kakao.talk'],
-  userIds: [95],
+  userIds: [0],
 };
 
 const RKPlugins: {
