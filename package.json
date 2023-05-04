@@ -4,10 +4,14 @@
   "license": "MIT",
   "author": "thoratica <me@tica.fun>",
   "scripts": {
+    "dev": "concurrently \"$npm_execpath run watch\" \"$npm_execpath exec nodemon -w dist/index.js --exec adb push dist/index.js /sdcard/msgbot/Bots/remote-kakao/remote-kakao.js\"",
     "watch": "tsc --watch",
     "build": "tsc"
   },
   "devDependencies": {
+    "concurrently": "^8.0.1",
+    "nodemon": "^2.0.22",
+    "rome": "^12.0.0",
     "typescript": "^5.0.4"
   }
 }

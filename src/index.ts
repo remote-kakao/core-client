@@ -14,6 +14,15 @@ const config: {
   userIds: [95],
 };
 
+const RKPlugins: {
+  [key: string]: {
+    onEvent(
+      msg: { event: string; data: Data; session: string },
+      sendReply: <T>(data: T) => void,
+    ): void;
+  };
+} = {};
+
 const pluginDir = new java.io.File(
   com.xfl.msgbot.utils.SharedVar.Companion.getBotsPath(),
   `${scriptName}/plugins`,
@@ -25,7 +34,7 @@ if (!pluginDir.exists())
   ).mkdir();
 
 Array.from(pluginDir.listFiles()).forEach((file) =>
-  Log.d(FileStream.read(file.getAbsolutePath())),
+  require(file.getAbsolutePath()),
 );
 
 const socket = new java.net.DatagramSocket();
@@ -83,6 +92,14 @@ const receiveMessage = (msg: string) => {
     session,
   }: { event: string; data: Data; session: string } = JSON.parse(msg);
 
+  function sendReply<T>(data: T) {
+    return sendEvent(`reply:${session}`, data);
+  }
+
+  Object.keys(RKPlugins).map((key) =>
+    RKPlugins[key].onEvent({ event, data, session }, sendReply),
+  );
+
   switch (event) {
     case 'send_text':
       if (
@@ -111,13 +128,13 @@ const receiveMessage = (msg: string) => {
 
           try {
             action.actionIntent.send(Api.getContext(), 0, intent);
-            sendEvent(`reply:${session}`, true);
+            sendReply(true);
           } catch (_) {
-            sendEvent(`reply:${session}`, false);
+            sendReply(false);
           }
         }
       }
-      sendEvent(`reply:${session}`, false);
+      sendReply(false);
       break;
     case 'read':
       if (data.userId?.toString() && data.packageName && data.roomId) {
@@ -132,13 +149,13 @@ const receiveMessage = (msg: string) => {
               1,
               new android.content.Intent(),
             );
-            sendEvent(`reply:${session}`, true);
+            sendReply(true);
           } catch (_) {
-            sendEvent(`reply:${session}`, false);
+            sendReply(false);
           }
         }
       }
-      sendEvent(`reply:${session}`, false);
+      sendReply(false);
       break;
     case 'get_profile_image':
       if (data.userId?.toString() && data.packageName && data.userHash) {
@@ -146,9 +163,9 @@ const receiveMessage = (msg: string) => {
           .get(Number(data.userId))
           ?.get(data.packageName.toString())
           ?.get(data.userHash.toString());
-        if (profileImage) return sendEvent(`reply:${session}`, profileImage);
+        if (profileImage) return sendReply(profileImage);
       }
-      sendEvent(`reply:${session}`, undefined);
+      sendReply(undefined);
       break;
     case 'get_room_icon':
       if (data.userId?.toString() && data.packageName && data.roomId) {
@@ -156,16 +173,11 @@ const receiveMessage = (msg: string) => {
           .get(Number(data.userId))
           ?.get(data.packageName.toString())
           ?.get(data.roomId.toString());
-        if (icon) return sendEvent(`reply:${session}`, icon);
+        if (icon) return sendReply(icon);
       }
-      sendEvent(`reply:${session}`, undefined);
+      sendReply(undefined);
       break;
   }
-
-  // config.plugins.forEach((plugin) => {
-  // 	if (plugin.onMessage)
-  // 		plugin.onMessage(event, data, session, sendReply, (x) => eval(x));
-  // });
 };
 
 function onMessage(data: {
