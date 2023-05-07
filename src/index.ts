@@ -1,6 +1,6 @@
 Device.acquireWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, '');
 
-const scriptName = 'remote-kakao';
+const scriptName = '$SCRIPT_NAME';
 
 const config: {
   address: string;
@@ -11,7 +11,7 @@ const config: {
   address: '172.30.1.41',
   port: 3000,
   packageNames: ['com.kakao.talk'],
-  userIds: [0],
+  userIds: [95],
 };
 
 const RKPlugins: {
@@ -192,7 +192,6 @@ function onMessage(data: {
   sendEvent('message', data);
 }
 
-// @ts-ignore
 const thread = new java.lang.Thread({
   run() {
     while (true) {
@@ -210,7 +209,7 @@ const thread = new java.lang.Thread({
       receiveMessage(message);
     }
   },
-});
+} as unknown as java.lang.Runnable);
 
 function onStartCompile() {
   replyActions.clear();

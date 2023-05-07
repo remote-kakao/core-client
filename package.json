@@ -4,7 +4,8 @@
   "license": "MIT",
   "author": "thoratica <me@tica.fun>",
   "scripts": {
-    "dev": "concurrently \"$npm_execpath run watch\" \"$npm_execpath exec nodemon -w dist/index.js --exec adb push dist/index.js /sdcard/msgbot/Bots/remote-kakao/remote-kakao.js\"",
+    "dev": "concurrently \"$npm_execpath run watch\" \"$npm_execpath exec nodemon -w dist --exec $npm_execpath run push\"",
+    "push": "adb push dist/index.js /sdcard/msgbot/Bots/remote-kakao/remote-kakao.js && adb push dist/update.js /sdcard/msgbot/Bots/remote-kakao/modules/update.js",
     "watch": "tsc --watch",
     "build": "tsc"
   },
