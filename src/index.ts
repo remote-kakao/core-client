@@ -27,15 +27,17 @@ const pluginDir = new java.io.File(
   com.xfl.msgbot.utils.SharedVar.Companion.getBotsPath(),
   `${scriptName}/plugins`,
 );
+
 if (!pluginDir.exists())
   new java.io.File(
     com.xfl.msgbot.utils.SharedVar.Companion.getBotsPath(),
     `${scriptName}/plugins`,
   ).mkdir();
+else
+  Array.from(pluginDir.listFiles()).forEach((file) =>
+    require(file.getAbsolutePath()),
+  );
 
-Array.from(pluginDir.listFiles()).forEach((file) =>
-  require(file.getAbsolutePath()),
-);
 
 const socket = new java.net.DatagramSocket();
 const address = java.net.InetAddress.getByName(config.address);
